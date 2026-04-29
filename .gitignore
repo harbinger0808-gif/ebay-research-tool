@@ -1,0 +1,27 @@
+# APIキー・シークレット（絶対にコミットしない）
+.env
+*.env
+.env.*
+
+# Google認証情報
+service_account.json
+credentials.json
+token.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# ログ・一時ファイル
+logs/
+*.log
+*.csv
+
+# macOS
+.DS_Store
+.kw_cache.json
+.research_cache.json
