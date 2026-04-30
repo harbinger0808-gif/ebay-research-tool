@@ -1,11 +1,13 @@
 """
 eBayリサーチ・スコアリングモジュール
 ジャンル別TOP5（有在庫4ジャンル・無在庫4ジャンル）
+※ Finding API廃止済み → Browse API + スクレイピングで完全代替
 """
 import os
 import time
 import base64
 import requests
+from typing import Optional
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
@@ -23,15 +25,13 @@ HEADERS = {
 
 BROWSE_API_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
 OAUTH_URL      = "https://api.ebay.com/identity/v1/oauth2/token"
-FINDING_API_URL = "https://svcs.ebay.com/services/search/FindingService/v1"
 APP_ID = os.getenv("EBAY_APP_ID", "")
 
-# スコアリング条件
+# スコアリング条件（Browse API専用・sold count不要）
 MIN_PROFIT_RATE  = 30.0   # 利益率30%以上
-MIN_SELL_THROUGH = 20.0   # 売れ率20%以上
-MAX_COMPETITION  = 100    # 日本セラーに絞るとライバル100件以下が現実的
-MIN_EBAY_PRICE   = 30.0   # eBay売値$30以上
-MIN_SOLD_COUNT   = 5      # 日本セラー絞り込み後は5件以上で判定
+MAX_COMPETITION  = 500    # 全世界競合500件以下（Browse APIは全世界なので緩め）
+MIN_EBAY_PRICE   = 15.0   # eBay売値$15以上
+MIN_JP_COUNT     = 3      # 日本セラー3件以上（需要確認）
 
 # トークンキャッシュ
 _ebay_token = ""
@@ -58,7 +58,7 @@ def _save_kw_cache(cache: dict):
     except Exception:
         pass
 
-def _kw_cache_get(keyword: str) -> dict | None:
+def _kw_cache_get(keyword: str) -> Optional[dict]:
     cache = _load_kw_cache()
     entry = cache.get(keyword)
     if not entry:
@@ -128,6 +128,20 @@ STOCKED_GENRES = {
         "japanese kokeshi doll vintage", "japanese cedar tray handmade",
         "japanese indigo dyeing fabric", "japanese washi paper handmade",
     ],
+    "オーラルケア（消耗品）": [
+        "kiseki no haburashi miracle toothbrush japan",
+        "miracle toothbrush japan ultra fine bristle 3 pack",
+        "KISS YOU ionic toothbrush japan",
+        "ion toothbrush japan ionpa",
+        "apagard premio toothpaste japan hydroxyapatite",
+        "apagard nano hydroxyapatite whitening toothpaste japan",
+        "GC tooth mousse recaldent japan",
+        "lion systema toothbrush japan 10 pack",
+        "lion dent EX systema toothbrush japan",
+        "sunstar ora2 toothpaste japan stain clear",
+        "ebisu premium toothbrush japan 7 line",
+        "japanese whitening toothpaste hydroxyapatite bulk",
+    ],
 }
 
 DROPSHIP_GENRES = {
@@ -151,6 +165,16 @@ DROPSHIP_GENRES = {
         "japan shiatsu neck massager", "japanese foot massager electric",
         "japan EMS face lift device", "japanese steam eye mask bulk",
         "japan back stretcher lumbar", "omron blood pressure monitor japan",
+    ],
+    "オーラルケア家電（無在庫）": [
+        "panasonic doltz sonic toothbrush japan EW-DP37",
+        "panasonic doltz electric toothbrush japan import",
+        "panasonic EW-DP52 sonic toothbrush japan",
+        "panasonic jet washer doltz EW-DJ55 japan",
+        "panasonic water flosser oral irrigator japan",
+        "panasonic EW-DJ65 cordless water flosser japan",
+        "omron mediclean sonic toothbrush japan HT-B322",
+        "omron oral irrigator water flosser japan",
     ],
     "カメラ・レンズ": [
         "fujinon vintage lens japan", "super takumar lens japan",
@@ -214,153 +238,83 @@ def get_usd_to_jpy() -> float:
 
 # ===== eBay データ取得 =====
 
-def _scrape_ebay_sold(keyword: str) -> dict:
-    """
-    eBay落札済みページを直接スクレイピングして本物の落札データを取得。
-    Finding APIの代替として使用。
-    """
-    enc = requests.utils.quote(keyword)
-    # 落札済み + 日本セラーに絞る
-    url = (
-        f"https://www.ebay.com/sch/i.html"
-        f"?_nkw={enc}&LH_Complete=1&LH_Sold=1"
-        f"&_sacat=0&LH_ItemCondition=1000&_ipg=60"
-    )
-    headers = {
-        **HEADERS,
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    }
-    try:
-        res = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(res.text, "html.parser")
-        items = soup.select(".s-item")
-        prices, top_url = [], ""
-        for item in items:
-            # "Shop on eBay" などのダミーアイテムを除外
-            title_el = item.select_one(".s-item__title")
-            if not title_el or "Shop on eBay" in title_el.text:
-                continue
-            price_el = item.select_one(".s-item__price")
-            if not price_el:
-                continue
-            raw = price_el.get_text(strip=True).replace(",", "").replace("$", "")
-            # 範囲表示（例: $10.00 to $20.00）は中間値を使う
-            parts = [p for p in raw.split() if p.replace(".", "").isdigit()]
-            if not parts:
-                continue
-            try:
-                p = sum(float(x) for x in parts) / len(parts)
-                if 0.5 <= p <= 10000:
-                    prices.append(p)
-                    if not top_url:
-                        a = item.select_one(".s-item__link")
-                        if a:
-                            top_url = a.get("href", "")
-            except Exception:
-                continue
-        if not prices:
-            return {"avg_usd": 0, "count": 0, "url": url, "source": "scrape"}
-        avg = sum(prices) / len(prices)
-        print(f"  [Scrape] {keyword[:30]}... → ${avg:.2f} ({len(prices)}件)")
-        return {"avg_usd": round(avg, 2), "count": len(prices), "url": top_url or url, "source": "scrape"}
-    except Exception as e:
-        print(f"  [Scrape失敗] {keyword}: {e}")
-        return {"avg_usd": 0, "count": 0, "url": "", "source": "scrape"}
-
-
-def get_ebay_sold(keyword: str) -> dict:
-    """
-    落札データ取得。Finding API → スクレイピングの順で試みる。
-    Browse APIの推定値は使わない（精度が低いため）。
-    """
-    # まずFinding APIを試す
-    params = {
-        "OPERATION-NAME": "findCompletedItems",
-        "SERVICE-VERSION": "1.0.0",
-        "SECURITY-APPNAME": APP_ID,
-        "RESPONSE-DATA-FORMAT": "JSON",
-        "REST-PAYLOAD": "",
-        "keywords": keyword,
-        "itemFilter(0).name": "SoldItemsOnly",
-        "itemFilter(0).value": "true",
-        "itemFilter(1).name": "ListingType",
-        "itemFilter(1).value": "FixedPrice",
-        "itemFilter(2).name": "LocatedIn",
-        "itemFilter(2).value": "JP",
-        "paginationInput.entriesPerPage": "60",
-        "sortOrder": "EndTimeSoonest",
-    }
-    try:
-        res = requests.get(FINDING_API_URL, params=params, headers=HEADERS, timeout=8)
-        data = res.json()
-        error_id = (
-            data.get("errorMessage", [{}])[0]
-                .get("error", [{}])[0]
-                .get("errorId", [""])[0]
-        )
-        if error_id:
-            print(f"  [Finding API] エラー{error_id} → スクレイピングで代替")
-            return _scrape_ebay_sold(keyword)
-        items = (
-            data.get("findCompletedItemsResponse", [{}])[0]
-               .get("searchResult", [{}])[0]
-               .get("item", [])
-        )
-        if not items:
-            print(f"  [Finding API] 結果なし → スクレイピングで代替")
-            return _scrape_ebay_sold(keyword)
-        prices, top_url = [], ""
-        for item in items:
-            try:
-                p = float(item["sellingStatus"][0]["convertedCurrentPrice"][0]["__value__"])
-                if 0.5 <= p <= 10000:
-                    prices.append(p)
-                if not top_url:
-                    top_url = item.get("viewItemURL", [""])[0]
-            except Exception:
-                continue
-        avg = sum(prices) / len(prices) if prices else 0
-        print(f"  [Finding API] {keyword[:30]}... → ${avg:.2f} ({len(prices)}件)")
-        return {"avg_usd": round(avg, 2), "count": len(prices), "url": top_url, "source": "api"}
-    except Exception as e:
-        print(f"  [Finding API失敗] {keyword}: {e} → スクレイピングで代替")
-        return _scrape_ebay_sold(keyword)
-
-
-def get_ebay_competition(keyword: str) -> int:
-    token = get_ebay_token()
-    if not token:
-        return 9999
-    try:
-        res = requests.get(
-            BROWSE_API_URL,
-            params={"q": keyword, "limit": 1, "filter": "buyingOptions:{FIXED_PRICE},itemLocationCountry:JP"},
-            headers={**HEADERS, "Authorization": f"Bearer {token}"},
-            timeout=8,
-        )
-        return res.json().get("total", 9999)
-    except Exception:
-        return 9999
 
 
 def get_ebay_data(keyword: str) -> dict:
-    # キャッシュ確認（7日間有効）
+    """
+    Browse APIで現在出品データを取得（Finding API廃止・スクレイピング403のため）。
+    - avg_usd    : 日本セラー上位50件の平均価格
+    - jp_count   : 日本セラーの出品数（需要の代理指標）
+    - competition: 全世界の出品総数
+    - sell_through: jp_count / competition * 100（市場占有率）
+    - url        : 代表商品URL
+    """
     cached = _kw_cache_get(keyword)
     if cached:
         return cached
 
-    sold = get_ebay_sold(keyword)
-    competition = get_ebay_competition(keyword)
-    sell_through = round(
-        sold["count"] / (sold["count"] + competition) * 100, 1
-    ) if (sold["count"] + competition) > 0 else 0.0
-    result = {**sold, "competition": competition, "sell_through": sell_through}
+    token = get_ebay_token()
+    if not token:
+        return {"avg_usd": 0, "count": 0, "competition": 9999,
+                "sell_through": 0.0, "url": "", "source": "browse"}
+    try:
+        # ① 日本セラー出品（価格・URL取得）
+        res_jp = requests.get(
+            BROWSE_API_URL,
+            params={
+                "q": keyword, "limit": 50, "sort": "bestMatch",
+                "filter": "itemLocationCountry:JP,buyingOptions:{FIXED_PRICE}",
+            },
+            headers={**HEADERS, "Authorization": f"Bearer {token}"},
+            timeout=8,
+        )
+        jp_data   = res_jp.json()
+        jp_total  = jp_data.get("total", 0)
+        items     = jp_data.get("itemSummaries", [])
+        prices, top_url = [], ""
+        for item in items:
+            val = item.get("price", {}).get("value")
+            if val:
+                try:
+                    p = float(val)
+                    if 0.5 <= p <= 10000:
+                        prices.append(p)
+                        if not top_url:
+                            top_url = item.get("itemWebUrl", "")
+                except Exception:
+                    pass
+        avg = round(sum(prices) / len(prices), 2) if prices else 0
 
-    # 有効なデータのみキャッシュ保存
-    if result["avg_usd"] > 0:
-        _kw_cache_set(keyword, result)
-    return result
+        # ② 全世界の競合数
+        res_all = requests.get(
+            BROWSE_API_URL,
+            params={"q": keyword, "limit": 1,
+                    "filter": "buyingOptions:{FIXED_PRICE}"},
+            headers={**HEADERS, "Authorization": f"Bearer {token}"},
+            timeout=8,
+        )
+        competition = res_all.json().get("total", 9999)
+
+        # 日本セラー比率（市場占有率）を sell_through の代理指標に
+        sell_through = round(jp_total / max(competition, 1) * 100, 1)
+
+        enc = requests.utils.quote(keyword)
+        result = {
+            "avg_usd":      avg,
+            "count":        jp_total,   # 日本セラー出品数（需要代理）
+            "competition":  competition,
+            "sell_through": sell_through,
+            "url":          top_url or f"https://www.ebay.com/sch/i.html?_nkw={enc}&LH_BIN=1",
+            "source":       "browse",
+        }
+        print(f"  [Browse] {keyword[:30]}... → avg${avg:.2f} / JP{jp_total}件 / 全{competition}件")
+        if result["avg_usd"] > 0:
+            _kw_cache_set(keyword, result)
+        return result
+    except Exception as e:
+        print(f"  [Browse失敗] {keyword}: {e}")
+        return {"avg_usd": 0, "count": 0, "competition": 9999,
+                "sell_through": 0.0, "url": "", "source": "browse"}
 
 
 # ===== 仕入れ価格取得 =====
@@ -476,17 +430,17 @@ PRICE_FN_MAP = {
 
 # ===== スコアリング =====
 
-def score_product(sold_count: int, competition: int, profit_rate: float) -> float:
-    return round((sold_count * max(profit_rate, 0)) / max(competition, 1), 3)
+def score_product(jp_count: int, competition: int, profit_rate: float, avg_price: float) -> float:
+    """利益率 × 価格 ÷ 競合数 でスコアリング（売れ筋 × 高単価 × ブルーオーシャンを優遇）"""
+    return round((max(profit_rate, 0) * avg_price * max(jp_count, 1)) / max(competition, 1), 3)
 
 
 def meets_conditions(r: dict) -> bool:
     return (
         r["profit_rate"]  >= MIN_PROFIT_RATE and
-        r["sell_through"] >= MIN_SELL_THROUGH and
         r["competition"]  <= MAX_COMPETITION and
         r["avg_sold_usd"] >= MIN_EBAY_PRICE and
-        r["sold_count"]   >= MIN_SOLD_COUNT
+        r["sold_count"]   >= MIN_JP_COUNT
     )
 
 
@@ -536,7 +490,7 @@ def _research_genres(genres: dict, source_names: list,
                 buy_source = "相場推定"
 
             profit = calc_profit(buy_price, ebay["avg_usd"], usd_jpy=usd_jpy)
-            sc = score_product(ebay["count"], ebay["competition"], profit["profit_rate"])
+            sc = score_product(ebay["count"], ebay["competition"], profit["profit_rate"], ebay["avg_usd"])
             enc = requests.utils.quote(keyword)
             source_fn = SOURCE_URL_MAP.get(buy_source)
 
