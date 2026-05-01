@@ -551,9 +551,9 @@ def get_ebay_sold_data(keyword: str) -> dict:
     enc = requests.utils.quote(keyword)
     sold_url = (
         f"https://www.ebay.com/sch/i.html"
-        f"?_nkw={enc}&LH_Complete=1&LH_Sold=1&_ipg=60"
-        # ※ LH_ItemCondition=1000（新品のみ）は除外
-        #   日本からの出品は中古品が大半のため新品縛りでは結果がほぼゼロになる
+        f"?_nkw={enc}&LH_Complete=1&LH_Sold=1&_salic=JP&_ipg=60"
+        # _salic=JP = 日本セラーのみ（Browse APIと同条件）
+        # LH_ItemCondition は外す（中古品も含めて実態を反映）
     )
     try:
         session = requests.Session()
@@ -910,7 +910,8 @@ def _research_genres(genres: dict, source_names: list,
                 "is_target":    profit["is_target"],
                 "meets_all":    False,  # 後で設定
                 "ebay_url":     ebay["url"],
-                "ebay_sell_url": f"https://www.ebay.com/sch/i.html?_nkw={enc_en}&LH_BIN=1",
+                # _salic=JP で日本セラーのみに絞り込み（Browse APIと同条件）
+                "ebay_sell_url": f"https://www.ebay.com/sch/i.html?_nkw={enc_en}&LH_BIN=1&_salic=JP",
                 # 仕入れサイトURLは日本語キーワードで生成
                 "source_url":   source_fn(enc_jp) if source_fn else "",
                 # データ品質フラグ

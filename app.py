@@ -124,7 +124,7 @@ def render_cards(results: list):
         profit_cls = "" if r["profit"] >= 0 else " profit-bad"
 
         enc_kw = r['keyword'].replace(' ', '+')
-        fallback_sold_url = f"https://www.ebay.com/sch/i.html?_nkw={enc_kw}&LH_Complete=1&LH_Sold=1&_ipg=60"
+        fallback_sold_url = f"https://www.ebay.com/sch/i.html?_nkw={enc_kw}&LH_Complete=1&LH_Sold=1&_salic=JP&_ipg=60"
         sold_url = r.get("sold_url") or fallback_sold_url
 
         # データ品質バッジ
