@@ -511,7 +511,9 @@ def get_ebay_sold_data(keyword: str) -> dict:
     enc = requests.utils.quote(keyword)
     sold_url = (
         f"https://www.ebay.com/sch/i.html"
-        f"?_nkw={enc}&LH_Complete=1&LH_Sold=1&LH_ItemCondition=1000&_ipg=60"
+        f"?_nkw={enc}&LH_Complete=1&LH_Sold=1&_ipg=60"
+        # ※ LH_ItemCondition=1000（新品のみ）は除外
+        #   日本からの出品は中古品が大半のため新品縛りでは結果がほぼゼロになる
     )
     try:
         session = requests.Session()
