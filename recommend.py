@@ -24,19 +24,27 @@ HEADERS = {
     )
 }
 
-BROWSE_API_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
-OAUTH_URL      = "https://api.ebay.com/identity/v1/oauth2/token"
+BROWSE_API_URL     = "https://api.ebay.com/buy/browse/v1/item_summary/search"
+INSIGHTS_API_URL   = "https://api.ebay.com/buy/marketplace_insights/v1_beta/item_sales/search"
+OAUTH_URL          = "https://api.ebay.com/identity/v1/oauth2/token"
 APP_ID = os.getenv("EBAY_APP_ID", "")
 
-# スコアリング条件（Browse API専用・sold count不要）
+# OAuthスコープ（Browse + Marketplace Insights 両方）
+OAUTH_SCOPE = (
+    "https://api.ebay.com/oauth/api_scope "
+    "https://api.ebay.com/oauth/api_scope/buy.marketplace.insights"
+)
+
+# スコアリング条件
 MIN_PROFIT_RATE  = 30.0   # 利益率30%以上
-MAX_COMPETITION  = 500    # 全世界競合500件以下（Browse APIは全世界なので緩め）
+MAX_COMPETITION  = 500    # 全世界競合500件以下
 MIN_EBAY_PRICE   = 15.0   # eBay売値$15以上
-MIN_JP_COUNT     = 3      # 日本セラー3件以上（需要確認）
+MIN_JP_COUNT     = 3      # 落札3件以上（実データ）/ JP出品3件以上（推定）
 
 # トークンキャッシュ
 _ebay_token = ""
 _ebay_token_expiry = 0.0
+_insights_available = None  # None=未確認 / True=使用可 / False=使用不可
 
 # キーワード単位キャッシュ（7日間・メモリ + ファイル）
 import json as _json
@@ -408,22 +416,27 @@ def get_ebay_token() -> str:
         return _ebay_token
     cert_id = os.getenv("EBAY_CERT_ID", "")
     credentials = base64.b64encode(f"{APP_ID}:{cert_id}".encode()).decode()
-    try:
-        res = requests.post(
-            OAUTH_URL,
-            headers={"Authorization": f"Basic {credentials}",
-                     "Content-Type": "application/x-www-form-urlencoded"},
-            data="grant_type=client_credentials&scope=https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope",
-            timeout=10,
-        )
-        result = res.json()
-        _ebay_token = result.get("access_token", "")
-        _ebay_token_expiry = time.time() + result.get("expires_in", 7200)
-        print(f"  [OAuth] {'成功' if _ebay_token else '失敗: ' + str(result)}")
-        return _ebay_token
-    except Exception as e:
-        print(f"  [OAuth失敗] {e}")
-        return ""
+    # まず Insights スコープ込みで試みる → 失敗なら basic スコープのみ
+    for scope in [OAUTH_SCOPE, "https://api.ebay.com/oauth/api_scope"]:
+        try:
+            scope_enc = requests.utils.quote(scope)
+            res = requests.post(
+                OAUTH_URL,
+                headers={"Authorization": f"Basic {credentials}",
+                         "Content-Type": "application/x-www-form-urlencoded"},
+                data=f"grant_type=client_credentials&scope={scope_enc}",
+                timeout=10,
+            )
+            result = res.json()
+            token = result.get("access_token", "")
+            if token:
+                _ebay_token = token
+                _ebay_token_expiry = time.time() + result.get("expires_in", 7200)
+                print(f"  [OAuth] 成功（スコープ: {'Insights込み' if 'insights' in scope else 'Basic'}）")
+                return _ebay_token
+        except Exception as e:
+            print(f"  [OAuth失敗] {e}")
+    return ""
 
 
 # ===== 為替 =====
@@ -522,6 +535,80 @@ def get_ebay_data(keyword: str) -> dict:
 
 # ===== eBay 落札済み実データ取得 =====
 
+def _get_sold_url(keyword: str) -> str:
+    enc = requests.utils.quote(keyword)
+    return f"https://www.ebay.com/sch/i.html?_nkw={enc}&LH_Complete=1&LH_Sold=1&_salic=JP&_ipg=60"
+
+
+def get_ebay_sold_data_api(keyword: str) -> Optional[dict]:
+    """
+    Marketplace Insights API（正規API）で実際の落札データを取得。
+    セラーアカウント + buy.marketplace.insights スコープが必要。
+    利用不可の場合は None を返してスクレイピングにフォールバック。
+    """
+    global _insights_available
+    if _insights_available is False:
+        return None  # 前回確認済みで使用不可 → スキップ
+
+    token = get_ebay_token()
+    if not token:
+        return None
+
+    sold_url = _get_sold_url(keyword)
+    try:
+        res = requests.get(
+            INSIGHTS_API_URL,
+            params={
+                "q":      keyword,
+                "limit":  50,
+                "filter": "itemLocationCountry:JP,buyingOptions:{FIXED_PRICE}",
+            },
+            headers={**HEADERS, "Authorization": f"Bearer {token}"},
+            timeout=8,
+        )
+        if res.status_code in (403, 401):
+            print(f"  [Insights] 権限なし（{res.status_code}）→ スクレイピングにフォールバック")
+            _insights_available = False
+            return None
+
+        data = res.json()
+
+        # エラーレスポンスチェック
+        if "errors" in data or "itemSales" not in data:
+            print(f"  [Insights] レスポンス異常: {data.get('errors', data)}")
+            _insights_available = False
+            return None
+
+        _insights_available = True
+        items = data.get("itemSales", [])
+        prices = []
+        for item in items:
+            val = item.get("lastSoldPrice", {}).get("value")
+            if val:
+                try:
+                    p = float(val)
+                    if 0.5 <= p <= 10000:
+                        prices.append(p)
+                except ValueError:
+                    pass
+
+        if not prices:
+            return {"sold_count": 0, "avg_sold_usd": 0.0,
+                    "sold_url": sold_url, "data_is_real": False}
+
+        avg = round(sum(prices) / len(prices), 2)
+        total = data.get("total", len(prices))
+        print(f"  [Insights✅] {keyword[:30]}... → {len(prices)}件落札 avg${avg} (全{total}件)")
+        return {
+            "sold_count":   len(prices),
+            "avg_sold_usd": avg,
+            "sold_url":     sold_url,
+            "data_is_real": True,
+        }
+    except Exception as e:
+        print(f"  [Insights例外] {keyword}: {e}")
+        return None
+
 # 落札済みスクレイピング用ヘッダー（ブラウザに偽装）
 SOLD_HEADERS = {
     "User-Agent": (
@@ -540,21 +627,21 @@ SOLD_HEADERS = {
 
 def get_ebay_sold_data(keyword: str) -> dict:
     """
-    eBay 落札済みリスト（LH_Sold=1）をスクレイピングして実際の売買データを取得。
-
-    Returns:
-        sold_count    : 取得できた落札件数（直近60件ページ内）
-        avg_sold_usd  : 落札価格の平均（USD）
-        sold_url      : 落札済み検索URL
-        data_is_real  : True = 実データ取得成功 / False = スクレイプ失敗
+    落札済み実データ取得の入口。
+    ① Marketplace Insights API（正規・高精度）→ ② スクレイピング（フォールバック）の順で試みる。
     """
-    enc = requests.utils.quote(keyword)
-    sold_url = (
-        f"https://www.ebay.com/sch/i.html"
-        f"?_nkw={enc}&LH_Complete=1&LH_Sold=1&_salic=JP&_ipg=60"
-        # _salic=JP = 日本セラーのみ（Browse APIと同条件）
-        # LH_ItemCondition は外す（中古品も含めて実態を反映）
-    )
+    # ① 正規API（セラーアカウント必要）
+    api_result = get_ebay_sold_data_api(keyword)
+    if api_result is not None:
+        return api_result
+
+    # ② スクレイピング（フォールバック）
+    return _get_ebay_sold_scrape(keyword)
+
+
+def _get_ebay_sold_scrape(keyword: str) -> dict:
+    """スクレイピングによる落札データ取得（フォールバック）"""
+    sold_url = _get_sold_url(keyword)
     try:
         session = requests.Session()
         # まずトップページにアクセスしてCookieを取得（Bot対策緩和）

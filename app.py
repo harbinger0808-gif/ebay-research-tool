@@ -130,9 +130,9 @@ def render_cards(results: list):
         # データ品質バッジ
         is_real = r.get("data_source") == "sold_real"
         data_badge = (
-            '<span style="background:#1565C0;color:white;border-radius:4px;padding:1px 6px;font-size:0.7rem;">📡 実データ</span>'
+            '<span style="background:#1565C0;color:white;border-radius:4px;padding:1px 6px;font-size:0.7rem;">📡 実売データ</span>'
             if is_real else
-            '<span style="background:#757575;color:white;border-radius:4px;padding:1px 6px;font-size:0.7rem;">📊 推定値</span>'
+            '<span style="background:#757575;color:white;border-radius:4px;padding:1px 6px;font-size:0.7rem;">📊 推定値（要確認）</span>'
         )
 
         links = []
