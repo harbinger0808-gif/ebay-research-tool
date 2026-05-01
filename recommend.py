@@ -182,6 +182,16 @@ DROPSHIP_GENRES = {
         "canon fd lens japan vintage", "minolta lens japan vintage",
         "japan camera strap leather handmade", "olympus zuiko lens japan",
     ],
+    "二日酔い・リカバリーグッズ（無在庫）": [
+        "ukon no chikara japan turmeric hangover drink",
+        "heparize japan liver support supplement",
+        "japanese shijimi clam liver supplement",
+        "suntory sesamin EX japan liver support",
+        "orihiro japan turmeric curcumin supplement",
+        "japan hangover prevention drink supplement",
+        "rohto japan liver supplement heparin",
+        "japan hangover iv drip style drink supplement",
+    ],
 }
 
 # ===== 日本語キーワードマップ（仕入れサイト検索用）=====
@@ -320,6 +330,16 @@ JP_KEYWORD_MAP = {
     "panasonic EW-DJ65 cordless water flosser japan":    "パナソニック EW-DJ65",
     "omron mediclean sonic toothbrush japan HT-B322":    "オムロン メディクリーン HT-B322",
     "omron oral irrigator water flosser japan":          "オムロン 口腔洗浄器",
+
+    # ── 二日酔い・リカバリーグッズ ──
+    "ukon no chikara japan turmeric hangover drink":     "ウコンの力 二日酔い",
+    "heparize japan liver support supplement":           "ヘパリーゼ 肝臓 サプリ",
+    "japanese shijimi clam liver supplement":            "しじみ サプリ 肝臓",
+    "suntory sesamin EX japan liver support":            "サントリー セサミンEX",
+    "orihiro japan turmeric curcumin supplement":        "オリヒロ ウコン サプリ",
+    "japan hangover prevention drink supplement":        "二日酔い 防止 ドリンク サプリ",
+    "rohto japan liver supplement heparin":              "ロート 肝臓 サプリ",
+    "japan hangover iv drip style drink supplement":     "二日酔い 点滴スタイル ドリンク",
 
     # ── カメラ・レンズ ──
     "fujinon vintage lens japan":               "フジノン レンズ",
