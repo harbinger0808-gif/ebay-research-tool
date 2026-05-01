@@ -183,6 +183,157 @@ DROPSHIP_GENRES = {
     ],
 }
 
+# ===== 日本語キーワードマップ（仕入れサイト検索用）=====
+# eBay検索用の英語キーワード → 日本の仕入れサイト用日本語キーワード
+JP_KEYWORD_MAP = {
+    # ── レトロゲーム ──
+    "famicom dragon quest japan":               "ファミコン ドラゴンクエスト",
+    "super famicom final fantasy japan":        "スーパーファミコン ファイナルファンタジー",
+    "game boy pokemon japan cartridge":         "ゲームボーイ ポケモン",
+    "sega saturn japan lot":                    "セガサターン",
+    "pc engine japan rare":                     "PCエンジン",
+    "famicom lot japan complete":               "ファミコン ソフト まとめ",
+    "nintendo 64 japan game cartridge":         "Nintendo64 ゲームソフト",
+    "gameboy advance japan limited":            "ゲームボーイアドバンス",
+
+    # ── フィギュア・アニメグッズ ──
+    "nendoroid japan exclusive limited":        "ねんどろいど 限定",
+    "figma japan limited edition":              "figma 限定",
+    "gundam model kit japan limited":           "ガンプラ 限定",
+    "dragon ball z figure japan vintage":       "ドラゴンボール フィギュア",
+    "one piece figure japan exclusive":         "ワンピース フィギュア",
+    "evangelion figure japan limited":          "エヴァンゲリオン フィギュア",
+    "sailor moon figure japan vintage":         "セーラームーン フィギュア",
+    "demon slayer figure japan limited":        "鬼滅の刃 フィギュア",
+
+    # ── 日本限定レゴ・玩具 ──
+    "lego japan limited set exclusive":         "レゴ 日本限定",
+    "lego ninjago japan limited":               "レゴ ニンジャゴー",
+    "lego creator japan exclusive":             "レゴ クリエイター",
+    "lego technic japan limited":               "レゴ テクニック",
+    "pokemon toy japan limited exclusive":      "ポケモン おもちゃ 限定",
+    "japan exclusive toy limited":              "日本限定 おもちゃ",
+    "bandai kamen rider japan limited":         "バンダイ 仮面ライダー",
+    "tomica japan limited diecast":             "トミカ 限定",
+
+    # ── チェキカメラ ──
+    "fujifilm instax mini japan limited":       "チェキ instax mini 限定",
+    "fujifilm instax square japan":             "チェキ instax スクエア",
+    "fujifilm instax wide japan limited":       "チェキ instax wide 限定",
+    "instax mini liplay japan":                 "チェキ mini liplay",
+    "fujifilm instax mini 99 japan":            "チェキ mini 99",
+    "instax mini evo japan limited":            "チェキ evo 限定",
+
+    # ── 消耗品（リピート買い）──
+    "fujifilm instax mini film japan":          "チェキ フィルム ミニ",
+    "instax square film japan":                 "チェキ フィルム スクエア",
+    "japanese skincare mask sheet bulk":        "フェイスマスク スキンケア まとめ",
+    "japan beauty serum collagen":              "美容液 コラーゲン",
+    "japanese pet snack treat bulk":            "ペット おやつ まとめ",
+    "japan dog treat freeze dried":             "犬 おやつ フリーズドライ",
+    "japanese cat food premium bulk":           "猫 フード プレミアム",
+    "japan dental care pet bulk":               "ペット デンタルケア",
+
+    # ── Tシャツ・アパレル ──
+    "uniqlo japan limited ut tshirt":           "ユニクロ UT 限定 Tシャツ",
+    "japan anime tshirt limited edition":       "アニメ Tシャツ 限定",
+    "pokemon center japan tshirt exclusive":    "ポケモンセンター Tシャツ",
+    "dragon ball z japan shirt limited":        "ドラゴンボール シャツ 限定",
+    "studio ghibli japan tshirt official":      "スタジオジブリ Tシャツ",
+    "naruto japan limited shirt":               "ナルト シャツ 限定",
+
+    # ── 古物・ヴィンテージ ──
+    "japanese vintage kimono silk obi":         "着物 帯 シルク",
+    "japan vintage tin toy showa":              "ブリキ おもちゃ 昭和",
+    "japanese antique porcelain meiji":         "明治 陶磁器 アンティーク",
+    "japan vintage whisky bottle unopened":     "ウイスキー 未開封",
+    "japanese vintage camera film showa":       "フィルムカメラ 昭和",
+    "japan vintage magazine anime rare":        "アニメ 雑誌 レア",
+    "japanese vintage poster showa retro":      "昭和 ポスター レトロ",
+    "japan vintage playing cards rare":         "トランプ カード レア",
+
+    # ── 伝統工芸・職人品 ──
+    "japanese magewappa bento box handmade":    "曲げわっぱ 弁当箱",
+    "japanese lacquer box vintage":             "漆器 箱",
+    "japanese pottery tea bowl handmade":       "陶器 茶碗",
+    "japanese bamboo basket woven":             "竹 かご",
+    "japanese kokeshi doll vintage":            "こけし 人形",
+    "japanese cedar tray handmade":             "杉 トレー",
+    "japanese indigo dyeing fabric":            "藍染め 布",
+    "japanese washi paper handmade":            "和紙",
+
+    # ── オーラルケア（消耗品）──
+    "kiseki no haburashi miracle toothbrush japan":           "奇跡の歯ブラシ",
+    "miracle toothbrush japan ultra fine bristle 3 pack":     "奇跡の歯ブラシ 3本",
+    "KISS YOU ionic toothbrush japan":                        "KISS YOU イオン歯ブラシ",
+    "ion toothbrush japan ionpa":                             "イオン歯ブラシ ionpa",
+    "apagard premio toothpaste japan hydroxyapatite":         "アパガード プレミオ",
+    "apagard nano hydroxyapatite whitening toothpaste japan": "アパガード ナノ",
+    "GC tooth mousse recaldent japan":                        "GC トゥースムース リカルデント",
+    "lion systema toothbrush japan 10 pack":                  "ライオン システマ 歯ブラシ 10本",
+    "lion dent EX systema toothbrush japan":                  "ライオン デント EX システマ",
+    "sunstar ora2 toothpaste japan stain clear":              "サンスター オーラツー ステインクリア",
+    "ebisu premium toothbrush japan 7 line":                  "エビス プレミアムケア 歯ブラシ",
+    "japanese whitening toothpaste hydroxyapatite bulk":      "ホワイトニング 歯磨き粉",
+
+    # ── 美容家電（無在庫）──
+    "panasonic face steamer japan nano":        "パナソニック スチーマー ナノケア",
+    "hitachi face steamer japan":               "日立 スチーマー",
+    "panasonic hair dryer japan nano":          "パナソニック ナノケア ドライヤー",
+    "yamazen facial massager japan":            "山善 フェイシャルマッサージャー",
+    "mtg refa carat japan face roller":         "MTG リファ カラット",
+    "japan led face mask beauty":               "LED フェイスマスク 美顔器",
+    "panasonic epilator japan ladies":          "パナソニック 脱毛器",
+    "omron tens unit japan":                    "オムロン 低周波治療器",
+
+    # ── ペット用品（無在庫）──
+    "japan automatic cat feeder wifi":          "猫 自動給餌器 wifi",
+    "japan dog water fountain filter":          "犬 自動給水器",
+    "japanese cat tree tower premium":          "キャットタワー",
+    "japan pet grooming glove":                 "ペット グルーミング グローブ",
+    "japan interactive cat toy laser":          "猫 おもちゃ レーザー",
+    "japanese dog carrier bag premium":         "犬 キャリーバッグ",
+
+    # ── チェキカメラ（無在庫）──
+    "fujifilm instax mini 12 japan":            "チェキ instax mini 12",
+    "fujifilm instax mini 40 japan":            "チェキ instax mini 40",
+    "fujifilm instax link wide japan":          "チェキ link wide",
+    "fujifilm instax mini liplay japan":        "チェキ mini liplay",
+    "instax mini hello kitty japan":            "チェキ ハローキティ",
+    "instax square sq6 japan":                  "チェキ スクエア SQ6",
+
+    # ── 健康器具・マッサージ ──
+    "japan shiatsu neck massager":              "指圧 ネックマッサージャー",
+    "japanese foot massager electric":          "電動 フットマッサージャー",
+    "japan EMS face lift device":               "EMS フェイスリフト 美顔器",
+    "japanese steam eye mask bulk":             "蒸気でホットアイマスク めぐりズム",
+    "japan back stretcher lumbar":              "バックストレッチャー 腰",
+    "omron blood pressure monitor japan":       "オムロン 血圧計",
+
+    # ── オーラルケア家電（無在庫）──
+    "panasonic doltz sonic toothbrush japan EW-DP37":    "パナソニック ドルツ EW-DP37",
+    "panasonic doltz electric toothbrush japan import":  "パナソニック ドルツ 電動歯ブラシ",
+    "panasonic EW-DP52 sonic toothbrush japan":          "パナソニック EW-DP52",
+    "panasonic jet washer doltz EW-DJ55 japan":          "パナソニック ジェットウォッシャー EW-DJ55",
+    "panasonic water flosser oral irrigator japan":      "パナソニック ジェットウォッシャー",
+    "panasonic EW-DJ65 cordless water flosser japan":    "パナソニック EW-DJ65",
+    "omron mediclean sonic toothbrush japan HT-B322":    "オムロン メディクリーン HT-B322",
+    "omron oral irrigator water flosser japan":          "オムロン 口腔洗浄器",
+
+    # ── カメラ・レンズ ──
+    "fujinon vintage lens japan":               "フジノン レンズ",
+    "super takumar lens japan":                 "スーパータクマー レンズ",
+    "canon fd lens japan vintage":              "キヤノン FD レンズ",
+    "minolta lens japan vintage":               "ミノルタ レンズ",
+    "japan camera strap leather handmade":      "カメラストラップ レザー",
+    "olympus zuiko lens japan":                 "オリンパス ズイコー レンズ",
+}
+
+def _jp_keyword(en_kw: str) -> str:
+    """英語キーワードを日本の仕入れサイト用の日本語キーワードに変換"""
+    return JP_KEYWORD_MAP.get(en_kw, en_kw)
+
+
 STOCKED_SOURCES  = [
     "ヤフオク", "エコリング", "ハードオフ", "駿河屋",
     "ブックオフ", "セカンドストリート", "ゲオ", "じゃんぱら", "Amazon",
@@ -554,34 +705,37 @@ def _research_genres(genres: dict, source_names: list,
                 ebay_cache[kw] = f.result()
 
         # 仕入れ価格を並列取得（全ソースを試して最安値を採用）
+        # 日本の仕入れサイトには日本語キーワードを使用
         def fetch_best_price(keyword):
+            jp_kw = _jp_keyword(keyword)
             best_price, best_source = 0, ""
             for src in source_names:
-                p = PRICE_FN_MAP[src](keyword)
+                p = PRICE_FN_MAP[src](jp_kw)
                 if p > 0 and (best_price == 0 or p < best_price):
                     best_price, best_source = p, src
-            return keyword, best_price, best_source
+            return keyword, best_price, best_source, jp_kw
 
         price_results = {}
         with ThreadPoolExecutor(max_workers=6) as ex:
             futures = {ex.submit(fetch_best_price, kw): kw for kw in keywords}
             for f in as_completed(futures):
-                kw, bp, bs = f.result()
-                price_results[kw] = (bp, bs)
+                kw, bp, bs, jp_kw = f.result()
+                price_results[kw] = (bp, bs, jp_kw)
 
         items = []
         for keyword in keywords:
             ebay = ebay_cache.get(keyword, {})
             if not ebay or ebay["avg_usd"] == 0:
                 continue
-            buy_price, buy_source = price_results.get(keyword, (0, ""))
+            buy_price, buy_source, jp_kw = price_results.get(keyword, (0, "", _jp_keyword(keyword)))
             if buy_price == 0:
                 buy_price = int(ebay["avg_usd"] * usd_jpy * fallback_rate)
                 buy_source = "相場推定"
 
             profit = calc_profit(buy_price, ebay["avg_usd"], usd_jpy=usd_jpy)
             sc = score_product(ebay["count"], ebay["competition"], profit["profit_rate"], ebay["avg_usd"])
-            enc = requests.utils.quote(keyword)
+            enc_en = requests.utils.quote(keyword)
+            enc_jp = requests.utils.quote(jp_kw)
             source_fn = SOURCE_URL_MAP.get(buy_source)
 
             items.append({
@@ -600,8 +754,9 @@ def _research_genres(genres: dict, source_names: list,
                 "is_target":    profit["is_target"],
                 "meets_all":    False,  # 後で設定
                 "ebay_url":     ebay["url"],
-                "ebay_sell_url": f"https://www.ebay.com/sch/i.html?_nkw={enc}&LH_BIN=1",
-                "source_url":   source_fn(enc) if source_fn else "",
+                "ebay_sell_url": f"https://www.ebay.com/sch/i.html?_nkw={enc_en}&LH_BIN=1",
+                # 仕入れサイトURLは日本語キーワードで生成
+                "source_url":   source_fn(enc_jp) if source_fn else "",
             })
 
         items.sort(key=lambda x: x["score"], reverse=True)
