@@ -182,15 +182,25 @@ DROPSHIP_GENRES = {
         "canon fd lens japan vintage", "minolta lens japan vintage",
         "japan camera strap leather handmade", "olympus zuiko lens japan",
     ],
-    "二日酔い・リカバリーグッズ（無在庫）": [
-        "ukon no chikara japan turmeric hangover drink",
-        "heparize japan liver support supplement",
-        "japanese shijimi clam liver supplement",
-        "suntory sesamin EX japan liver support",
-        "orihiro japan turmeric curcumin supplement",
-        "japan hangover prevention drink supplement",
-        "rohto japan liver supplement heparin",
-        "japan hangover iv drip style drink supplement",
+    "睡眠・リカバリーグッズ（無在庫）": [
+        "japan megurism steam eye mask sleep",
+        "japan nightmin ear plug sleep aid",
+        "japan glycine sleep supplement amino acid",
+        "japan theanine sleep supplement relax",
+        "japan melatonin supplement sleep",
+        "japan pillow mist aromatherapy sleep",
+        "japan ashitaba sleep supplement",
+        "japan sleep improvement wearable device",
+    ],
+    "Yシャツ・ドレスシャツ（無在庫）": [
+        "japan dress shirt non iron slim fit premium",
+        "japan formal white shirt slim easy care",
+        "japan premium cotton dress shirt men",
+        "japan dress shirt stretch fabric men",
+        "japan oxford dress shirt button down",
+        "japan dress shirt wrinkle free business",
+        "japan slim fit dress shirt classic white",
+        "japan coolmax dress shirt summer men",
     ],
 }
 
@@ -331,15 +341,25 @@ JP_KEYWORD_MAP = {
     "omron mediclean sonic toothbrush japan HT-B322":    "オムロン メディクリーン HT-B322",
     "omron oral irrigator water flosser japan":          "オムロン 口腔洗浄器",
 
-    # ── 二日酔い・リカバリーグッズ ──
-    "ukon no chikara japan turmeric hangover drink":     "ウコンの力 二日酔い",
-    "heparize japan liver support supplement":           "ヘパリーゼ 肝臓 サプリ",
-    "japanese shijimi clam liver supplement":            "しじみ サプリ 肝臓",
-    "suntory sesamin EX japan liver support":            "サントリー セサミンEX",
-    "orihiro japan turmeric curcumin supplement":        "オリヒロ ウコン サプリ",
-    "japan hangover prevention drink supplement":        "二日酔い 防止 ドリンク サプリ",
-    "rohto japan liver supplement heparin":              "ロート 肝臓 サプリ",
-    "japan hangover iv drip style drink supplement":     "二日酔い 点滴スタイル ドリンク",
+    # ── 睡眠・リカバリーグッズ ──
+    "japan megurism steam eye mask sleep":           "めぐりズム 蒸気でホットアイマスク",
+    "japan nightmin ear plug sleep aid":             "ナイトミン 耳ほぐタイム",
+    "japan glycine sleep supplement amino acid":     "グリシン 睡眠 サプリ アミノ酸",
+    "japan theanine sleep supplement relax":         "テアニン 睡眠 リラックス サプリ",
+    "japan melatonin supplement sleep":              "メラトニン 睡眠 サプリ",
+    "japan pillow mist aromatherapy sleep":          "ピロースプレー アロマ 睡眠",
+    "japan ashitaba sleep supplement":               "アシタバ 睡眠 サプリ",
+    "japan sleep improvement wearable device":       "睡眠 改善 ウェアラブル デバイス",
+
+    # ── Yシャツ・ドレスシャツ ──
+    "japan dress shirt non iron slim fit premium":   "形態安定 スリムフィット ドレスシャツ",
+    "japan formal white dress shirt easy care":      "ホワイト ドレスシャツ イージーケア",
+    "japan premium cotton dress shirt men":          "コットン プレミアム ドレスシャツ 男性",
+    "japan dress shirt stretch fabric men":          "ストレッチ ドレスシャツ メンズ",
+    "japan oxford dress shirt button down":          "オックスフォード ドレスシャツ ボタンダウン",
+    "japan dress shirt wrinkle free business":       "シワになりにくい ビジネスシャツ",
+    "japan slim fit dress shirt classic white":      "スリムフィット クラシック ホワイト シャツ",
+    "japan coolmax dress shirt summer men":          "クールマックス ドレスシャツ 夏 メンズ",
 
     # ── カメラ・レンズ ──
     "fujinon vintage lens japan":               "フジノン レンズ",
