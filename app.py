@@ -123,9 +123,12 @@ def render_cards(results: list):
         badge   = '<span class="badge ok">🟢 全条件達成</span>' if meets else '<span class="badge ng">🟡 要確認</span>'
         profit_cls = "" if r["profit"] >= 0 else " profit-bad"
 
+        enc_kw = r['keyword'].replace(' ', '+')
+        sold_url = f"https://www.ebay.com/sch/i.html?_nkw={enc_kw}&LH_Complete=1&LH_Sold=1&LH_ItemCondition=1000&_ipg=60"
         links = []
         if r.get("ebay_url"):
-            links.append(f'<a href="{r["ebay_url"]}" target="_blank">📊 落札例</a>')
+            links.append(f'<a href="{r["ebay_url"]}" target="_blank">📊 現在出品</a>')
+        links.append(f'<a href="{sold_url}" target="_blank" style="color:#2E7D32;font-weight:bold;">✅ 実際の落札済み</a>')
         if r.get("source_url"):
             links.append(f'<a href="{r["source_url"]}" target="_blank">🛒 {r.get("buy_source","仕入れ先")}</a>')
         link_html = " &nbsp;|&nbsp; ".join(links)
