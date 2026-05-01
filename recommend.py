@@ -561,14 +561,20 @@ def get_ebay_sold_data(keyword: str) -> dict:
 # ===== 仕入れ価格取得 =====
 
 def get_yahooauction_price(keyword: str) -> int:
+    """
+    ヤフオク 即決価格（BIN）のみを取得。
+    aucnow=1 で即決あり商品に絞り、s1=price&o1=a で安い順ソート。
+    入札開始価格（¥1〜¥100スタートのオークション）は除外する。
+    """
     try:
         enc = requests.utils.quote(keyword)
-        url = f"https://auctions.yahoo.co.jp/search/search?p={enc}&istatus=1&s1=cbids&o1=a"
+        # aucnow=1 = 即決あり商品のみ / s1=price = 価格順 / o1=a = 昇順
+        url = f"https://auctions.yahoo.co.jp/search/search?p={enc}&istatus=1&s1=price&o1=a&aucnow=1"
         soup = BeautifulSoup(requests.get(url, headers=HEADERS, timeout=5).text, "html.parser")
         prices = []
         for el in soup.select(".Product__price"):
             digits = "".join(filter(str.isdigit, el.get_text(strip=True).replace(",", "")))
-            if digits:
+            if digits and int(digits) >= 300:   # ¥300未満はノイズとして除外
                 prices.append(int(digits))
         return sorted(prices)[0] if prices else 0
     except Exception:
@@ -828,6 +834,13 @@ def _research_genres(genres: dict, source_names: list,
                 data_source  = "browse_est"  # Browse API推定
 
             buy_price, buy_source, jp_kw = price_results.get(keyword, (0, "", _jp_keyword(keyword)))
+
+            # 価格の妥当性チェック：eBay価格の5%未満 or ¥300未満はノイズ（入札開始値等）
+            min_reasonable = max(int(avg_sold_usd * usd_jpy * 0.05), 300)
+            if buy_price > 0 and buy_price < min_reasonable:
+                print(f"  [価格異常] ¥{buy_price} < 下限¥{min_reasonable} → 相場推定に切替 ({keyword[:30]})")
+                buy_price, buy_source = 0, ""
+
             if buy_price == 0:
                 buy_price = int(avg_sold_usd * usd_jpy * fallback_rate)
                 buy_source = "相場推定"
