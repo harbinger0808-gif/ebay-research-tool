@@ -4,6 +4,7 @@ eBayリサーチ・スコアリングモジュール
 ※ Finding API廃止済み → Browse API + スクレイピングで完全代替
 """
 import os
+import re
 import time
 import base64
 import requests
@@ -478,6 +479,85 @@ def get_ebay_data(keyword: str) -> dict:
                 "sell_through": 0.0, "url": "", "source": "browse"}
 
 
+# ===== eBay 落札済み実データ取得 =====
+
+# 落札済みスクレイピング用ヘッダー（ブラウザに偽装）
+SOLD_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9,ja;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "DNT": "1",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Cache-Control": "max-age=0",
+}
+
+def get_ebay_sold_data(keyword: str) -> dict:
+    """
+    eBay 落札済みリスト（LH_Sold=1）をスクレイピングして実際の売買データを取得。
+
+    Returns:
+        sold_count    : 取得できた落札件数（直近60件ページ内）
+        avg_sold_usd  : 落札価格の平均（USD）
+        sold_url      : 落札済み検索URL
+        data_is_real  : True = 実データ取得成功 / False = スクレイプ失敗
+    """
+    enc = requests.utils.quote(keyword)
+    sold_url = (
+        f"https://www.ebay.com/sch/i.html"
+        f"?_nkw={enc}&LH_Complete=1&LH_Sold=1&LH_ItemCondition=1000&_ipg=60"
+    )
+    try:
+        session = requests.Session()
+        # まずトップページにアクセスしてCookieを取得（Bot対策緩和）
+        session.get("https://www.ebay.com", headers=SOLD_HEADERS, timeout=8)
+        time.sleep(1)
+
+        resp = session.get(sold_url, headers=SOLD_HEADERS, timeout=10)
+        if resp.status_code != 200:
+            print(f"  [Sold] ステータス {resp.status_code} → スキップ ({keyword[:30]})")
+            return {"sold_count": 0, "avg_sold_usd": 0.0, "sold_url": sold_url, "data_is_real": False}
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        # eBay の落札済みリスト価格セレクタ（複数パターン対応）
+        price_els = soup.select(".s-item__price")
+        prices = []
+        for el in price_els:
+            text = el.get_text(strip=True)
+            # "US $12.50" / "$120.00" / "$10.00 to $15.00"（範囲は中央値）
+            matches = re.findall(r'\$[\d,]+\.?\d*', text)
+            for m in matches:
+                try:
+                    val = float(m.replace("$", "").replace(",", ""))
+                    if 0.5 <= val <= 10000:
+                        prices.append(val)
+                        break  # 1アイテムにつき1価格
+                except ValueError:
+                    pass
+
+        if not prices:
+            print(f"  [Sold] 価格抽出0件（Botブロックの可能性）→ {keyword[:30]}")
+            return {"sold_count": 0, "avg_sold_usd": 0.0, "sold_url": sold_url, "data_is_real": False}
+
+        avg = round(sum(prices) / len(prices), 2)
+        print(f"  [Sold✅] {keyword[:30]}... → {len(prices)}件落札 avg${avg}")
+        return {
+            "sold_count":   len(prices),
+            "avg_sold_usd": avg,
+            "sold_url":     sold_url,
+            "data_is_real": True,
+        }
+    except Exception as e:
+        print(f"  [Sold失敗] {keyword}: {e}")
+        return {"sold_count": 0, "avg_sold_usd": 0.0, "sold_url": sold_url, "data_is_real": False}
+
+
 # ===== 仕入れ価格取得 =====
 
 def get_yahooauction_price(keyword: str) -> int:
@@ -722,18 +802,38 @@ def _research_genres(genres: dict, source_names: list,
                 kw, bp, bs, jp_kw = f.result()
                 price_results[kw] = (bp, bs, jp_kw)
 
+        # 落札済みデータを並列取得（Browse APIと同時実行）
+        sold_cache = {}
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            futures = {ex.submit(get_ebay_sold_data, kw): kw for kw in keywords}
+            for f in as_completed(futures):
+                kw = futures[f]
+                sold_cache[kw] = f.result()
+
         items = []
         for keyword in keywords:
             ebay = ebay_cache.get(keyword, {})
             if not ebay or ebay["avg_usd"] == 0:
                 continue
+            sold = sold_cache.get(keyword, {})
+
+            # 落札済み実データが取得できた場合はそちらを優先
+            if sold.get("data_is_real") and sold["sold_count"] > 0:
+                avg_sold_usd = sold["avg_sold_usd"]
+                sold_count   = sold["sold_count"]
+                data_source  = "sold_real"  # 実データ
+            else:
+                avg_sold_usd = ebay["avg_usd"]
+                sold_count   = ebay["count"]
+                data_source  = "browse_est"  # Browse API推定
+
             buy_price, buy_source, jp_kw = price_results.get(keyword, (0, "", _jp_keyword(keyword)))
             if buy_price == 0:
-                buy_price = int(ebay["avg_usd"] * usd_jpy * fallback_rate)
+                buy_price = int(avg_sold_usd * usd_jpy * fallback_rate)
                 buy_source = "相場推定"
 
-            profit = calc_profit(buy_price, ebay["avg_usd"], usd_jpy=usd_jpy)
-            sc = score_product(ebay["count"], ebay["competition"], profit["profit_rate"], ebay["avg_usd"])
+            profit = calc_profit(buy_price, avg_sold_usd, usd_jpy=usd_jpy)
+            sc = score_product(sold_count, ebay["competition"], profit["profit_rate"], avg_sold_usd)
             enc_en = requests.utils.quote(keyword)
             enc_jp = requests.utils.quote(jp_kw)
             source_fn = SOURCE_URL_MAP.get(buy_source)
@@ -742,8 +842,8 @@ def _research_genres(genres: dict, source_names: list,
                 "type":         result_type,
                 "genre":        genre,
                 "keyword":      keyword,
-                "avg_sold_usd": ebay["avg_usd"],
-                "sold_count":   ebay["count"],
+                "avg_sold_usd": avg_sold_usd,
+                "sold_count":   sold_count,
                 "competition":  ebay["competition"],
                 "sell_through": ebay["sell_through"],
                 "buy_price":    buy_price,
@@ -757,6 +857,9 @@ def _research_genres(genres: dict, source_names: list,
                 "ebay_sell_url": f"https://www.ebay.com/sch/i.html?_nkw={enc_en}&LH_BIN=1",
                 # 仕入れサイトURLは日本語キーワードで生成
                 "source_url":   source_fn(enc_jp) if source_fn else "",
+                # データ品質フラグ
+                "data_source":  data_source,
+                "sold_url":     sold.get("sold_url", ""),
             })
 
         items.sort(key=lambda x: x["score"], reverse=True)

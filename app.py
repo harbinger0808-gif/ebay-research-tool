@@ -124,23 +124,33 @@ def render_cards(results: list):
         profit_cls = "" if r["profit"] >= 0 else " profit-bad"
 
         enc_kw = r['keyword'].replace(' ', '+')
-        sold_url = f"https://www.ebay.com/sch/i.html?_nkw={enc_kw}&LH_Complete=1&LH_Sold=1&LH_ItemCondition=1000&_ipg=60"
+        fallback_sold_url = f"https://www.ebay.com/sch/i.html?_nkw={enc_kw}&LH_Complete=1&LH_Sold=1&LH_ItemCondition=1000&_ipg=60"
+        sold_url = r.get("sold_url") or fallback_sold_url
+
+        # データ品質バッジ
+        is_real = r.get("data_source") == "sold_real"
+        data_badge = (
+            '<span style="background:#1565C0;color:white;border-radius:4px;padding:1px 6px;font-size:0.7rem;">📡 実データ</span>'
+            if is_real else
+            '<span style="background:#757575;color:white;border-radius:4px;padding:1px 6px;font-size:0.7rem;">📊 推定値</span>'
+        )
+
         links = []
         if r.get("ebay_url"):
             links.append(f'<a href="{r["ebay_url"]}" target="_blank">📊 現在出品</a>')
-        links.append(f'<a href="{sold_url}" target="_blank" style="color:#2E7D32;font-weight:bold;">✅ 実際の落札済み</a>')
+        links.append(f'<a href="{sold_url}" target="_blank" style="color:#2E7D32;font-weight:bold;">✅ 落札済み確認</a>')
         if r.get("source_url"):
             links.append(f'<a href="{r["source_url"]}" target="_blank">🛒 {r.get("buy_source","仕入れ先")}</a>')
         link_html = " &nbsp;|&nbsp; ".join(links)
 
         st.markdown(f"""
         <div class="card {col_cls}">
-          {badge}
+          {badge} &nbsp; {data_badge}
           <div class="card-title">#{i+1} &nbsp;{r['keyword']}</div>
           <div class="card-genre">📁 {r['genre']} &nbsp;·&nbsp; 仕入れ: {r.get('buy_source','─')}</div>
           <div class="metric-row">
             <span class="metric-chip">💵 eBay ${r['avg_sold_usd']}</span>
-            <span class="metric-chip {'ok' if r['sold_count'] >= 5 else 'bad'}">✅ 落札 {r['sold_count']}件</span>
+            <span class="metric-chip {'ok' if r['sold_count'] >= 5 else 'bad'}">{'✅ 落札実績' if r.get('data_source')=='sold_real' else '📦 JP出品'} {r['sold_count']}件</span>
             <span class="metric-chip {'ok' if r.get('sell_through',0) >= 20 else 'bad'}">📈 売れ率 {r.get('sell_through',0)}%</span>
             <span class="metric-chip {'ok' if r['competition'] <= 100 else 'bad'}">👥 競合 {r['competition']}件</span>
           </div>
