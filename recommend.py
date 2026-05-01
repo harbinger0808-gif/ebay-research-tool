@@ -336,8 +336,9 @@ def _jp_keyword(en_kw: str) -> str:
 
 
 STOCKED_SOURCES  = [
-    "ヤフオク", "エコリング", "ハードオフ", "駿河屋",
-    "ブックオフ", "セカンドストリート", "ゲオ", "じゃんぱら", "Amazon",
+    # 信頼性の高い順（公式・大手リテール優先 → 中古専門 → ヤフオクは最後）
+    "Amazon", "駿河屋", "ハードオフ", "ブックオフ",
+    "セカンドストリート", "ゲオ", "じゃんぱら", "エコリング", "ヤフオク",
 ]
 DROPSHIP_SOURCES = [
     "Amazon", "キタムラ", "ヨドバシ", "ビックカメラ",
@@ -790,16 +791,16 @@ def _research_genres(genres: dict, source_names: list,
                 kw = futures[f]
                 ebay_cache[kw] = f.result()
 
-        # 仕入れ価格を並列取得（全ソースを試して最安値を採用）
+        # 仕入れ価格を順番に取得（source_namesの順＝優先順位。最初にヒットした価格を採用）
         # 日本の仕入れサイトには日本語キーワードを使用
+        # ※ 最安値ではなく「信頼性の高いサイト優先」で正確な利益率を算出
         def fetch_best_price(keyword):
             jp_kw = _jp_keyword(keyword)
-            best_price, best_source = 0, ""
             for src in source_names:
                 p = PRICE_FN_MAP[src](jp_kw)
-                if p > 0 and (best_price == 0 or p < best_price):
-                    best_price, best_source = p, src
-            return keyword, best_price, best_source, jp_kw
+                if p > 0:
+                    return keyword, p, src, jp_kw
+            return keyword, 0, "", jp_kw
 
         price_results = {}
         with ThreadPoolExecutor(max_workers=6) as ex:
