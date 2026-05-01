@@ -183,17 +183,27 @@ DROPSHIP_GENRES = {
     ],
 }
 
-STOCKED_SOURCES  = ["ヤフオク", "エコリング", "ハードオフ", "駿河屋", "Amazon"]
-DROPSHIP_SOURCES = ["Amazon", "キタムラ", "ヨドバシ"]
+STOCKED_SOURCES  = [
+    "ヤフオク", "エコリング", "ハードオフ", "駿河屋",
+    "ブックオフ", "セカンドストリート", "ゲオ", "じゃんぱら", "Amazon",
+]
+DROPSHIP_SOURCES = [
+    "Amazon", "キタムラ", "ヨドバシ", "ビックカメラ",
+]
 
 SOURCE_URL_MAP = {
-    "ヤフオク":   lambda e: f"https://auctions.yahoo.co.jp/search/search?p={e}&istatus=1&s1=cbids&o1=a",
-    "エコリング": lambda e: f"https://www.eco-ring.com/products/search?keyword={e}",
-    "ハードオフ": lambda e: f"https://hardoff.co.jp/search/?q={e}&sort=price_asc",
-    "駿河屋":     lambda e: f"https://www.suruga-ya.jp/search?category=0&search_word={e}&soldout=1&order=price_asc",
-    "Amazon":     lambda e: f"https://www.amazon.co.jp/s?k={e}&sort=price-asc-rank",
-    "キタムラ":   lambda e: f"https://www.kitamura.jp/search/index.php?q={e}&sort=price_asc",
-    "ヨドバシ":   lambda e: f"https://www.yodobashi.com/?word={e}",
+    "ヤフオク":           lambda e: f"https://auctions.yahoo.co.jp/search/search?p={e}&istatus=1&s1=cbids&o1=a",
+    "エコリング":         lambda e: f"https://www.eco-ring.com/products/search?keyword={e}",
+    "ハードオフ":         lambda e: f"https://hardoff.co.jp/search/?q={e}&sort=price_asc",
+    "駿河屋":             lambda e: f"https://www.suruga-ya.jp/search?category=0&search_word={e}&soldout=1&order=price_asc",
+    "Amazon":             lambda e: f"https://www.amazon.co.jp/s?k={e}&sort=price-asc-rank",
+    "キタムラ":           lambda e: f"https://www.kitamura.jp/search/index.php?q={e}&sort=price_asc",
+    "ヨドバシ":           lambda e: f"https://www.yodobashi.com/?word={e}",
+    "ブックオフ":         lambda e: f"https://shopping.bookoff.co.jp/search/keyword/{e}?sort=price&order=asc",
+    "セカンドストリート": lambda e: f"https://www.2ndstreet.jp/search/results/?search_word={e}&sort=price_asc",
+    "ゲオ":               lambda e: f"https://ec.geo-online.co.jp/shop/search?search_text={e}&sort=price_asc",
+    "ビックカメラ":       lambda e: f"https://www.biccamera.com/bc/category/?q={e}&sort=cheap",
+    "じゃんぱら":         lambda e: f"https://www.janpara.co.jp/sale/search/?KEYWORDS={e}&SORT=4",
 }
 
 
@@ -417,14 +427,94 @@ def get_yodobashi_price(keyword: str) -> int:
     except Exception:
         return 0
 
+def get_bookoff_price(keyword: str) -> int:
+    try:
+        enc = requests.utils.quote(keyword)
+        url = f"https://shopping.bookoff.co.jp/search/keyword/{enc}?sort=price&order=asc"
+        soup = BeautifulSoup(requests.get(url, headers=HEADERS, timeout=5).text, "html.parser")
+        prices = []
+        for el in soup.select(".product-price, [class*='price']"):
+            digits = "".join(filter(str.isdigit, el.get_text(strip=True).replace(",", "")))
+            if digits and 100 <= int(digits) <= 500000:
+                prices.append(int(digits))
+        return sorted(prices)[0] if prices else 0
+    except Exception:
+        return 0
+
+def get_2ndstreet_price(keyword: str) -> int:
+    try:
+        enc = requests.utils.quote(keyword)
+        url = f"https://www.2ndstreet.jp/search/results/?search_word={enc}&sort=price_asc"
+        soup = BeautifulSoup(requests.get(url, headers=HEADERS, timeout=5).text, "html.parser")
+        prices = []
+        for el in soup.select("[class*='price'], [class*='Price']"):
+            digits = "".join(filter(str.isdigit, el.get_text(strip=True).replace(",", "")))
+            if digits and 100 <= int(digits) <= 500000:
+                prices.append(int(digits))
+        return sorted(prices)[0] if prices else 0
+    except Exception:
+        return 0
+
+def get_geo_price(keyword: str) -> int:
+    try:
+        enc = requests.utils.quote(keyword)
+        url = f"https://ec.geo-online.co.jp/shop/search?search_text={enc}&sort=price_asc"
+        soup = BeautifulSoup(requests.get(url, headers=HEADERS, timeout=5).text, "html.parser")
+        prices = []
+        for el in soup.select("[class*='price'], [class*='Price']"):
+            digits = "".join(filter(str.isdigit, el.get_text(strip=True).replace(",", "")))
+            if digits and 100 <= int(digits) <= 500000:
+                prices.append(int(digits))
+        return sorted(prices)[0] if prices else 0
+    except Exception:
+        return 0
+
+def get_biccamera_price(keyword: str) -> int:
+    try:
+        enc = requests.utils.quote(keyword)
+        url = f"https://www.biccamera.com/bc/category/?q={enc}&sort=cheap"
+        soup = BeautifulSoup(requests.get(url, headers=HEADERS, timeout=5).text, "html.parser")
+        prices = []
+        for el in soup.select(".bc-price, [class*='price']"):
+            digits = "".join(filter(str.isdigit, el.get_text(strip=True).replace(",", "")))
+            if digits and 100 <= int(digits) <= 1000000:
+                prices.append(int(digits))
+        return sorted(prices)[0] if prices else 0
+    except Exception:
+        return 0
+
+def get_janpara_price(keyword: str) -> int:
+    """じゃんぱら（中古PC・家電専門）"""
+    try:
+        enc = requests.utils.quote(keyword)
+        url = f"https://www.janpara.co.jp/sale/search/?KEYWORDS={enc}&SORT=4"
+        soup = BeautifulSoup(requests.get(url, headers=HEADERS, timeout=5).text, "html.parser")
+        prices = []
+        for el in soup.select(".item_price, [class*='price']"):
+            digits = "".join(filter(str.isdigit, el.get_text(strip=True).replace(",", "")))
+            if digits and 100 <= int(digits) <= 500000:
+                prices.append(int(digits))
+        return sorted(prices)[0] if prices else 0
+    except Exception:
+        return 0
+
+def get_mercari_link_price(keyword: str) -> int:
+    """メルカリ（リンクのみ・価格取得不可のため0返却）"""
+    return 0
+
 PRICE_FN_MAP = {
-    "ヤフオク":   get_yahooauction_price,
-    "エコリング": get_ecoring_price,
-    "ハードオフ": get_hardoff_price,
-    "駿河屋":     get_surugaya_price,
-    "Amazon":     get_amazon_price,
-    "キタムラ":   get_kitamura_price,
-    "ヨドバシ":   get_yodobashi_price,
+    "ヤフオク":       get_yahooauction_price,
+    "エコリング":     get_ecoring_price,
+    "ハードオフ":     get_hardoff_price,
+    "駿河屋":         get_surugaya_price,
+    "Amazon":         get_amazon_price,
+    "キタムラ":       get_kitamura_price,
+    "ヨドバシ":       get_yodobashi_price,
+    "ブックオフ":     get_bookoff_price,
+    "セカンドストリート": get_2ndstreet_price,
+    "ゲオ":           get_geo_price,
+    "ビックカメラ":   get_biccamera_price,
+    "じゃんぱら":     get_janpara_price,
 }
 
 
